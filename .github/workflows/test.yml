@@ -1,0 +1,72 @@
+name: Automation Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Test suite yang dijalankan'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - api
+          - web
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  api-test:
+    name: API Test
+    if: ${{ github.event_name == 'pull_request' || inputs.suite == 'all' || inputs.suite == 'api' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Run API tests (@api)
+        env:
+          APP_ID: ${{ secrets.DUMMYAPI_APP_ID }}
+        run: gradle apiTest
+      - name: Upload API report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-cucumber-report
+          path: build/reports/cucumber/api/
+
+  web-test:
+    name: Web UI Test
+    if: ${{ github.event_name == 'pull_request' || inputs.suite == 'all' || inputs.suite == 'web' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      - name: Run Web tests (@web)
+        env:
+          HEADLESS: 'true'
+        run: gradle webTest
+      - name: Upload Web report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-cucumber-report
+          path: build/reports/cucumber/web/

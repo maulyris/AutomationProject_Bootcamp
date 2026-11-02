@@ -1,0 +1,72 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.automation'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    cucumberVersion = '7.18.1'
+    seleniumVersion = '4.25.0'
+    restAssuredVersion = '5.5.0'
+    assertjVersion = '3.26.3'
+}
+
+dependencies {
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-picocontainer:${cucumberVersion}"
+    testImplementation "org.seleniumhq.selenium:selenium-java:${seleniumVersion}"
+    testImplementation "io.rest-assured:rest-assured:${restAssuredVersion}"
+    testImplementation "io.rest-assured:json-schema-validator:${restAssuredVersion}"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+/**
+ * Helper untuk membuat task Cucumber berdasarkan tag.
+ * Report (HTML + JSON) disimpan di build/reports/cucumber/<name>/
+ */
+def registerCucumberTask = { String taskName, String tag, String gluePackage, String featuresDir, String reportDir ->
+    tasks.register(taskName, JavaExec) {
+        group = 'verification'
+        description = "Menjalankan semua Cucumber test dengan tag ${tag}"
+        dependsOn 'testClasses'
+
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'io.cucumber.core.cli.Main'
+
+        def out = layout.buildDirectory.dir("reports/cucumber/${reportDir}").get().asFile
+        doFirst { out.mkdirs() }
+
+        args = [
+                '--tags', tag,
+                '--glue', gluePackage,
+                '--plugin', 'pretty',
+                '--plugin', "html:${out}/cucumber.html",
+                '--plugin', "json:${out}/cucumber.json",
+                featuresDir
+        ]
+
+        // Meneruskan konfigurasi (mis. -Pheadless=false -Pbrowser=firefox)
+        ['headless', 'browser', 'baseUrl'].each { key ->
+            if (project.hasProperty(key)) {
+                systemProperty key, project.property(key)
+            }
+        }
+    }
+}
+
+// ./gradlew apiTest  -> semua scenario @api
+registerCucumberTask('apiTest', '@api', 'com.automation.api', 'classpath:features/api', 'api')
+// ./gradlew webTest  -> semua scenario @web
+registerCucumberTask('webTest', '@web', 'com.automation.web', 'classpath:features/web', 'web')
