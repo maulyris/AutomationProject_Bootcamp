@@ -42,6 +42,9 @@ public class AuthSteps {
 
     @When("I sign up again with the same username")
     public void signUpExisting() {
+        // Demoblaze kadang gagal membuka modal Sign up untuk kedua kalinya di halaman yang sama,
+        // jadi mulai dari halaman yang di-refresh agar state modal bersih.
+        world.home().open(WebConfig.baseUrl());
         world.home().clickSignUp();
         world.lastAlert = world.signUpModal().signUp(world.username, world.password);
     }

@@ -1,10 +1,13 @@
 package com.automation.web.pages;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.time.Duration;
 import java.util.List;
 
 /** Halaman utama Demoblaze: navbar, kategori, daftar produk. */
@@ -31,8 +34,16 @@ public class HomePage extends BasePage {
         click(NAV_LOGIN);
     }
 
+    /** Membuka modal Sign up; klik diulang sekali jika modal belum muncul (animasi modal sebelumnya / CI lambat). */
     public void clickSignUp() {
+        waitInvisible(By.cssSelector(".modal-backdrop"));
         click(NAV_SIGN_UP);
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.visibilityOfElementLocated(By.id("sign-username")));
+        } catch (TimeoutException e) {
+            click(NAV_SIGN_UP);
+        }
     }
 
     public void clickLogout() {
